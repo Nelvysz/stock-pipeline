@@ -11,4 +11,4 @@ def sector_rotation():
     symbol_df = extract_symbols()
     tickmatch_df = clean_tickmatch_df(tickmatch_df)
     sector_df = agg_accum_sector(symbol_df,tickmatch_df)
-    return sector_df.to_dict()
+    return sector_df.to_json(orient='records')
