@@ -40,9 +40,6 @@ def extract_tickmatch(start_date: str = None, end_date: str = None) -> pd.DataFr
     if conditions:
         query += " WHERE " + " AND ".join(conditions)
     
-    print(query)
-    print(params)
-    
     try:
         result = pd.read_sql(query, conn, params=params)
         return result
