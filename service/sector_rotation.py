@@ -44,3 +44,35 @@ def extract_tickmatch(start_date: str = None, end_date: str = None) -> pd.DataFr
         return result
     except Exception as ex:
         print("Connection could not be made due to the following error: \n", ex)
+        
+        
+def extract_symbols() -> pd.DataFrame:
+    query = """
+        select 
+            ss.SymbolName ,
+            ss.SectorName 
+        from sm_stocks ss 
+    """
+    try:
+        result = pd.read_sql(query, conn)
+        return result
+    except Exception as ex:
+        print("Connection could not be made due to the following error: \n", ex)
+
+def clean_tickmatch_df(tickmatch_df):
+    tickmatch_df['Date'] = tickmatch_df['Time'].str.split(' ',expand=True)[0]
+    tickmatch_df.loc[:,'Date'] = pd.to_datetime(tickmatch_df['Date'], format="%Y.%m.%d")
+    tickmatch_df.loc[tickmatch_df['Type'] == 'BUY', "Sign"] = 1
+    tickmatch_df.loc[tickmatch_df['Type'] == 'SELL', "Sign"] = -1
+    tickmatch_df = tickmatch_df[~tickmatch_df['Sign'].isna()]
+    tickmatch_df.loc[:,"Values"] = tickmatch_df['Vol'] * tickmatch_df['Sign'] * tickmatch_df['Last']
+    return tickmatch_df[['Symbol','Values','Date']]
+
+def agg_accum_sector(tickmath_df,symbol_df):
+    values_df = tickmath_df.groupby(by=['Date','Symbol']).sum()
+    values_df = values_df.reset_index()
+    merge_df = values_df.merge(symbol_df, left_on='Symbol',right_on='SymbolName').drop(columns=['SymbolName'])
+    merge_df = merge_df.fillna(value={'SectorName':'Other'})
+    merge_df = merge_df[['Date','SectorName','Values']]
+    accum_sector_df=merge_df.groupby(by=['SectorName','Date']).sum().reset_index()
+    return accum_sector_df
