@@ -20,25 +20,29 @@ def extract_tickmatch(start_date: str = None, end_date: str = None) -> pd.DataFr
     query = """
         SELECT 
             st.Symbol,
-            st.type,
-            st.vol
+            st.Type,
+            st.Last,
+            st.Vol,
             st.Time
         FROM stocksm_tickmatchs st
     """
     conditions = []
-    params = []
+    params = ()
 
     if start_date:
         conditions.append("`Time` >= %s")
-        params.append(f"{start_date} 00:00:00")
+        params += (f"{start_date} 00:00:00",)
     
     if end_date:
         conditions.append("`Time` <= %s")
-        params.append(f"{end_date} 23:59:59")
+        params += (f"{end_date} 23:59:59",)
     
     if conditions:
         query += " WHERE " + " AND ".join(conditions)
-
+    
+    print(query)
+    print(params)
+    
     try:
         result = pd.read_sql(query, conn, params=params)
         return result
@@ -68,8 +72,8 @@ def clean_tickmatch_df(tickmatch_df):
     tickmatch_df.loc[:,"Values"] = tickmatch_df['Vol'] * tickmatch_df['Sign'] * tickmatch_df['Last']
     return tickmatch_df[['Symbol','Values','Date']]
 
-def agg_accum_sector(tickmath_df,symbol_df):
-    values_df = tickmath_df.groupby(by=['Date','Symbol']).sum()
+def agg_accum_sector(symbol_df,tickmatch_df):
+    values_df = tickmatch_df.groupby(by=['Date','Symbol']).sum()
     values_df = values_df.reset_index()
     merge_df = values_df.merge(symbol_df, left_on='Symbol',right_on='SymbolName').drop(columns=['SymbolName'])
     merge_df = merge_df.fillna(value={'SectorName':'Other'})
